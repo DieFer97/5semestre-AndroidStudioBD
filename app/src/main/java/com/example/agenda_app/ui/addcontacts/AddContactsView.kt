@@ -14,18 +14,23 @@ class AddContactsViewModel(application: Application) : AndroidViewModel(applicat
     val saveStatus: LiveData<SaveResult> = _saveStatus
 
     fun saveContact(name: String, phone: String, email: String) {
-        // Validar datos
-        if (name.isBlank()) {
-            _saveStatus.value = SaveResult(false, "El nombre no puede estar vacío")
-            return
+        // Validar que todos los campos estén completos
+        when {
+            name.isBlank() -> {
+                _saveStatus.value = SaveResult(false, "El nombre no puede estar vacío")
+                return
+            }
+            phone.isBlank() -> {
+                _saveStatus.value = SaveResult(false, "El teléfono no puede estar vacío")
+                return
+            }
+            email.isBlank() -> {
+                _saveStatus.value = SaveResult(false, "El correo electrónico no puede estar vacío")
+                return
+            }
         }
 
-        if (phone.isBlank()) {
-            _saveStatus.value = SaveResult(false, "El teléfono no puede estar vacío")
-            return
-        }
-
-        // Guardar contacto
+        // Guardar contacto solo si todos los campos están completos
         val id = dbHelper.addContact(name, phone, email)
 
         if (id > 0) {
