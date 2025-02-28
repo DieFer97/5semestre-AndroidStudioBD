@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.example.agenda_app.model.Contact
 
 class ContactsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
@@ -12,7 +13,6 @@ class ContactsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         private const val DATABASE_VERSION = 1
         private const val DATABASE_NAME = "Contacts.db"
 
-        // Tabla de contactos
         private const val TABLE_CONTACTS = "contacts"
         private const val COLUMN_ID = "id"
         private const val COLUMN_NAME = "name"
@@ -22,7 +22,7 @@ class ContactsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
 
     override fun onCreate(db: SQLiteDatabase) {
         val CREATE_CONTACTS_TABLE = ("CREATE TABLE " + TABLE_CONTACTS + "("
-                + COLUMN_ID + " INTEGER PRIMARY KEY,"
+                + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + COLUMN_NAME + " TEXT,"
                 + COLUMN_PHONE + " TEXT,"
                 + COLUMN_EMAIL + " TEXT" + ")")
@@ -34,28 +34,54 @@ class ContactsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         onCreate(db)
     }
 
-
-    // Agregar un nuevo contacto
     fun addContact(name: String, phone: String, email: String): Long {
         val db = this.writableDatabase
-        val values = ContentValues()
-        values.put(COLUMN_NAME, name)
-        values.put(COLUMN_PHONE, phone)
-        values.put(COLUMN_EMAIL, email)
+        val values = ContentValues().apply {
+            put(COLUMN_NAME, name)
+            put(COLUMN_PHONE, phone)
+            put(COLUMN_EMAIL, email)
+        }
 
-        // Insertar fila
         val id = db.insert(TABLE_CONTACTS, null, values)
         db.close()
         return id
     }
 
-    // Obtener todos los contactos
-    fun getAllContacts(): Cursor {
+    fun getAllContacts(): List<Contact> {
+        val contactList = mutableListOf<Contact>()
+        val selectQuery = "SELECT * FROM $TABLE_CONTACTS ORDER BY $COLUMN_NAME ASC"
         val db = this.readableDatabase
-        return db.rawQuery("SELECT * FROM $TABLE_CONTACTS", null)
+        val cursor: Cursor?
+
+        try {
+            cursor = db.rawQuery(selectQuery, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            db.close()
+            return contactList
+        }
+
+        var id: Int
+        var name: String
+        var phone: String
+        var email: String
+
+        if (cursor.moveToFirst()) {
+            do {
+                id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID))
+                name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NAME))
+                phone = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE))
+                email = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL))
+
+                val contact = Contact(id, name, phone, email)
+                contactList.add(contact)
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        db.close()
+        return contactList
     }
 
-    // Eliminar un contacto
     fun deleteContact(id: Int): Int {
         val db = this.writableDatabase
         val result = db.delete(TABLE_CONTACTS, "$COLUMN_ID = ?", arrayOf(id.toString()))
